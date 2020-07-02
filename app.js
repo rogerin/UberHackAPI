@@ -45,7 +45,7 @@ let uber = new Uber({
     // proxy: 'PROXY URL' // optional, defaults to none
 });
 
-//var token = "KA.eyJ2ZXJzaW9uIjoyLcGVsaW5lX2tleV9pZCI6Ik1RPT0iLCJwaXBlbGluZV9pZCI6MX0.DVV3WYZQkb5pWHHU9ag0IhkQBfhq5lPtIJsPZnI9-yA";
+//var token = "KA.eyJ......";
 var token;
 console.log(token)
 

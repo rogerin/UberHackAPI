@@ -9,7 +9,7 @@ let route = {
 }
 
 let googleMapsClient = maps.createClient({
-    key: 'AIzaSyCCOckI9-kEMlS7ZDHYKA_-DkDtBK2dAKM',
+    key: 'AIzaS...M',
     //Promise: Promise
 })
 
@@ -59,7 +59,7 @@ function getPosition(address){
 
 
 
-let token = "JA.VUNmGAAAAAAAEgASAAAABwAIAAwAAAAAAAAAEgAAAAAAAAG8AAAAFAAAAAAADgAQAAQAAAAIAAwAAAAOAAAAkAAAABwAAAAEAAAAEAAAAN57ZOziRJ1SxzfB5NrZ2eRsAAAAG4wXIbDH3fkk-iY3Y9D8EWY5V5XLqhz_ZgkA3S_w08iYTNraLdbwWb-s8pMuhbW3iNrbQEoNZ7K239kQ3sDG_qMS5WZwjC-K4QZvjunPPm53rtzOyGVR0BlGFMAkwzXfVQHWL1RPxAzP-difDAAAAH2IoTjbsnPn8sNIFCQAAABiMGQ4NTgwMy0zOGEwLTQyYjMtODA2ZS03YTRjZjhlMTk2ZWU";
+let token = "JA.VUNmGAAAAAAAEgASA....";
 //var token;
 let URL_BASE = 'http://localhost:3000';
 let URL_BASE_SANDBOX = 'http://localhost:3000';
@@ -76,9 +76,9 @@ const axios = require('axios')
 const app = express();
 
 let uber = new Uber({
-    client_id: 'EwGTCbr922SYQHb25TKEXHEaZcp6gCl-',
-    client_secret: '3zgZx8QcoaD1TPlGjplElJf2_jvuuSOrWpCiQ7Ie',
-    server_token: 'HkqmgeWLgOHjSoxCsro99sWFc2DufEa19OvdG6Mn',
+    client_id: 'EwGTCbr9...',
+    client_secret: '3zgZx8QcoaD....',
+    server_token: 'HkqmgeWL....',
     redirect_uri: 'http://localhost:3000/api/callback',
     name: 'Hackathon uHack',
 

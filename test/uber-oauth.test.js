@@ -10,7 +10,8 @@ const options = {
 
 test('authorization URL preserves the Uber OAuth scopes and redirect', () => {
     const uber = new UberOAuth(options);
-    const url = new URL(uber.getAuthorizeUrl(['history', 'profile', 'request', 'places']));
+    const state = 'a'.repeat(43);
+    const url = new URL(uber.getAuthorizeUrl(['history', 'profile', 'request', 'places'], state));
 
     assert.equal(url.origin, 'https://login.uber.com');
     assert.equal(url.pathname, '/oauth/v2/authorize');
@@ -18,6 +19,9 @@ test('authorization URL preserves the Uber OAuth scopes and redirect', () => {
     assert.equal(url.searchParams.get('client_id'), options.client_id);
     assert.equal(url.searchParams.get('redirect_uri'), options.redirect_uri);
     assert.equal(url.searchParams.get('scope'), 'history profile request places');
+    assert.equal(url.searchParams.get('state'), state);
+    assert.throws(() => uber.getAuthorizeUrl(['profile']), /state/);
+    assert.throws(() => uber.getAuthorizeUrl(['profile'], 'short'), /state/);
 });
 
 test('authorization code exchange uses form data and preserves the token tuple', async () => {

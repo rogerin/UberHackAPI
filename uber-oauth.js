@@ -15,9 +15,12 @@ class UberOAuth {
         }
     }
 
-    getAuthorizeUrl(scopes) {
+    getAuthorizeUrl(scopes, state) {
         if (!Array.isArray(scopes) || scopes.length === 0) {
             throw new Error('At least one Uber scope is required');
+        }
+        if (typeof state !== 'string' || state.length < 32) {
+            throw new Error('An unpredictable Uber OAuth state is required');
         }
 
         const url = new URL(AUTHORIZE_URL);
@@ -25,6 +28,7 @@ class UberOAuth {
         url.searchParams.set('client_id', this.clientId);
         url.searchParams.set('redirect_uri', this.redirectUri);
         url.searchParams.set('scope', scopes.join(' '));
+        url.searchParams.set('state', state);
         return url.toString();
     }
 

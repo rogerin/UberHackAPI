@@ -1,5 +1,5 @@
 const express = require('express');
-const Uber = require('node-uber');
+const Uber = require('./uber-oauth');
 //const maps = require('@google/maps')
 
 
@@ -34,20 +34,12 @@ const axios = require('axios')
 const app = express();
 
 let uber = new Uber({
-    client_id: '-',
-    client_secret: '',
-    server_token: '',
-    redirect_uri: 'http://localhost:3000/api/callback',
-    name: 'Hackathon uHack',
-
-    language: 'pt_BR' // optional, defaults to en_US
-    //sandbox: true, // optional, defaults to false
-    // proxy: 'PROXY URL' // optional, defaults to none
+    client_id: process.env.UBER_CLIENT_ID,
+    client_secret: process.env.UBER_CLIENT_SECRET,
+    redirect_uri: process.env.UBER_REDIRECT_URI || 'http://localhost:3000/api/callback'
 });
 
-//var token = "KA.eyJ......";
 var token;
-console.log(token)
 
 
 app.get('/api/login', (req, res) => {
@@ -57,12 +49,10 @@ app.get('/api/login', (req, res) => {
 
 app.get('/api/callback', (req,res) => {
     uber.authorizationAsync({authorization_code: req.query.code})
-        .spread(function(access_token, refresh_token, authorizedScopes, tokenExpiration) {
+        .then(function([access_token, refresh_token, authorizedScopes, tokenExpiration]) {
             // store the user id and associated access_token, refresh_token, scopes and token expiration date
-            console.log('New access_token retrieved: ' + access_token);
             console.log('... token allows access to scopes: ' + authorizedScopes);
             console.log('... token is valid until: ' + tokenExpiration);
-            console.log('... after token expiration, re-authorize using refresh_token: ' + refresh_token);
 
             token = access_token;
             // redirect the user back to your actual app
@@ -74,8 +64,9 @@ app.get('/api/callback', (req,res) => {
 
             });
         })
-        .error(function(err) {
-            console.error(err);
+        .catch(function(err) {
+            console.error('Uber authorization failed:', err.message);
+            res.status(502).json({ error: 'Uber authorization failed' });
         });
 });
 
@@ -156,6 +147,10 @@ app.get('/api/requests/current', (req, res) => {
 
 
 
-app.listen(3000, () => {
-  console.log('Example app listening on port 3000!');
-});
+if (require.main === module) {
+    app.listen(3000, () => {
+        console.log('Example app listening on port 3000!');
+    });
+}
+
+module.exports = app;

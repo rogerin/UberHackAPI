@@ -1,5 +1,6 @@
 const express = require('express');
-const Uber = require('node-uber');
+const Uber = require('./uber-oauth');
+const createUberSession = require('./uber-session');
 const maps = require('@google/maps');
 const args = process.argv.slice(2);
 
@@ -9,7 +10,7 @@ let route = {
 }
 
 let googleMapsClient = maps.createClient({
-    key: 'AIzaS...M',
+    key: process.env.GOOGLE_MAPS_API_KEY,
     //Promise: Promise
 })
 
@@ -17,7 +18,6 @@ let googleMapsClient = maps.createClient({
 // date.setDate(date.getDate() + 1);
 
 function getPosition(address){
-    console.log('Convertendo:',address)
     return new Promise( (resolve, reject)=>{
         googleMapsClient.geocode({
             address: address
@@ -59,8 +59,7 @@ function getPosition(address){
 
 
 
-let token = "JA.VUNmGAAAAAAAEgASA....";
-//var token;
+const pollingToken = process.env.UBER_ACCESS_TOKEN;
 let URL_BASE = 'http://localhost:3000';
 let URL_BASE_SANDBOX = 'http://localhost:3000';
 
@@ -75,17 +74,21 @@ const axios = require('axios')
 
 const app = express();
 
-let uber = new Uber({
-    client_id: 'EwGTCbr9...',
-    client_secret: '3zgZx8QcoaD....',
-    server_token: 'HkqmgeWL....',
-    redirect_uri: 'http://localhost:3000/api/callback',
-    name: 'Hackathon uHack',
+function createUber() {
+    return new Uber({
+        client_id: process.env.UBER_CLIENT_ID,
+        client_secret: process.env.UBER_CLIENT_SECRET,
+        redirect_uri: process.env.UBER_REDIRECT_URI || 'http://localhost:3000/api/callback'
+    });
+}
+const auth = createUberSession(createUber);
 
-    language: 'pt_BR' // optional, defaults to en_US
-    //sandbox: true, // optional, defaults to false
-    // proxy: 'PROXY URL' // optional, defaults to none
-});
+function sendUberError(res, err) {
+    return res.json({
+        status: err.response?.status || 502,
+        statusText: err.response?.statusText || 'Uber request failed'
+    });
+}
 
 
 
@@ -105,155 +108,106 @@ app.get('/api', (req, res) => {
  
 
 
-app.get('/api/login', (req, res) => {
-    let url = uber.getAuthorizeUrl(['history','profile', 'request', 'places']);
-    res.redirect(url);
-});
-
-app.get('/api/callback', (req,res) => {
-    uber.authorizationAsync({authorization_code: req.query.code})
-        .spread(function(access_token, refresh_token, authorizedScopes, tokenExpiration) {
-            // store the user id and associated access_token, refresh_token, scopes and token expiration date
-            console.log('New access_token retrieved: ' + access_token);
-            console.log('... token allows access to scopes: ' + authorizedScopes);
-            console.log('... token is valid until: ' + tokenExpiration);
-            console.log('... after token expiration, re-authorize using refresh_token: ' + refresh_token);
-
-            token = access_token;
-            // redirect the user back to your actual app
-            res.json({
-                access_token,
-                authorizedScopes,
-                tokenExpiration,
-                refresh_token
-
-            });
-        })
-        .error(function(err) {
-            console.error(err);
-        });
-});
+app.get('/api/login', auth.login);
+app.get('/api/callback', auth.callback);
 
 
 
-app.get('/api/me', (req, res) => {
+app.get('/api/me', auth.requireToken, (req, res) => {
     axios.get('https://api.uber.com/v1.2/me', {
         headers: {
-            'Authorization': 'Bearer ' +token,
+            'Authorization': 'Bearer ' + res.locals.uberAccessToken,
             'Accept-Language': 'pt_BR',
             'Content-Type': 'application/json'
         }
      }).then( data => {
-         console.log(data.data)
          res.json(data.data)
      }).catch( err => {
-        res.json( {
-            status: err.response.status,
-            statusText: err.response.statusText
-        } )
+        sendUberError(res, err)
     })
 })
 
-app.get('/api/products', (req, res) => {
+app.get('/api/products', auth.requireToken, (req, res) => {
    // axios.get('https://api.uber.com/v1.2/products?latitude=-8.061796&longitude=-34.871954', {
         axios.get('https://api.uber.com/v1.2/products?latitude=-8.061796&longitude=-34.871954', {
         
         headers: {
-            'Authorization': 'Bearer ' +token,
+            'Authorization': 'Bearer ' + res.locals.uberAccessToken,
             'Accept-Language': 'pt_BR',
             'Content-Type': 'application/json'
         }
      }).then( data => {
-         console.log(data.data)
          res.json(data.data)
      }).catch( err => {
-        res.json( {
-            status: err.response.status,
-            statusText: err.response.statusText
-        } )
+        sendUberError(res, err)
     })
 })
 
 
 
-app.get('/api/payment-methods', (req, res) => {
+app.get('/api/payment-methods', auth.requireToken, (req, res) => {
     axios.get('https://api.uber.com/v1.2/payment-methods', {
         headers: {
-           'Authorization': 'Bearer ' +token,
+           'Authorization': 'Bearer ' + res.locals.uberAccessToken,
            'Accept-Language': 'pt_BR',
            'Content-Type': 'application/json'
         }
     }).then( data => {
-        console.log(data.data)
         res.json(data.data)
     }).catch( err => {
-       res.json( {
-           status: err.response.status,
-           statusText: err.response.statusText
-       } )
+       sendUberError(res, err)
    })
 })
 
-app.get('/api/history', (req, res) => {
+app.get('/api/history', auth.requireToken, (req, res) => {
     axios.get('https://api.uber.com/v1.2/history', {
         headers: {
-           'Authorization': 'Bearer ' +token,
+           'Authorization': 'Bearer ' + res.locals.uberAccessToken,
            'Accept-Language': 'pt_BR',
            'Content-Type': 'application/json'
         }
     }).then( data => {
-        console.log(data.data)
         res.json(data.data)
     }).catch( err => {
-        res.json( {
-            status: err.response.status,
-            statusText: err.response.statusText
-        } )
+        sendUberError(res, err)
     })
 })
 // https://sandbox-api.uber.com/
 //https://api.uber.com/
-app.get('/api/requests/current', (req, res) => {
+app.get('/api/requests/current', auth.requireToken, (req, res) => {
     axios.get('https://sandbox-api.uber.com/v1.2/requests/current', {
         headers: {
-           'Authorization': 'Bearer ' +token,
+           'Authorization': 'Bearer ' + res.locals.uberAccessToken,
            'Accept-Language': 'pt_BR',
            'Content-Type': 'application/json'
         }
     }).then( data => {
         res.json(data.data)
     }).catch( err => {
-        res.json( {
-            status: err.response.status,
-            statusText: err.response.statusText
-        } )
+        sendUberError(res, err)
     })
 })
 
 
 
 
-app.get('/api/estimates/price', (req, res) => {
+app.get('/api/estimates/price', auth.requireToken, (req, res) => {
 
     axios.get('https://api.uber.com/v1.2/estimates/price?start_latitude=-8.061796&start_longitude=-34.871954&end_latitude=-8.042849&end_longitude=-34.908664', {
         headers: {
-           'Authorization': 'Bearer ' +token,
+           'Authorization': 'Bearer ' + res.locals.uberAccessToken,
            'Accept-Language': 'pt_BR',
            'Content-Type': 'application/json'
         }
     }).then( data => {
-        console.log(data.data)
         res.json(data.data)
     }).catch( err => {
-        res.json( {
-            status: err.response.status,
-            statusText: err.response.statusText
-        } )
+        sendUberError(res, err)
     })
 })
 
 
-app.get('/api/requests/estimate', (req, res) => {
+app.get('/api/requests/estimate', auth.requireToken, (req, res) => {
 
     let destination = {
         start_latitude: -8.061796,
@@ -274,28 +228,21 @@ app.get('/api/requests/estimate', (req, res) => {
 
     axios.post('https://api.uber.com/v1.2/requests/estimate', destination, {
         headers: {
-           'Authorization': 'Bearer ' +token,
+           'Authorization': 'Bearer ' + res.locals.uberAccessToken,
            'Accept-Language': 'pt_BR',
            'Content-Type': 'application/json'
         }
     }).then( data => {
-        console.log(data.data)
-        let value = data.data.fare.value;
-        let fare_id = data.data.fare.fare_id;
-        let display = data.data.fare.display;
-
-        console.log(value,display,fare_id)
         res.json(data.data)
     }).catch( err => {
-        res.json( {
-            status: err.response.status,
-            statusText: err.response.statusText
-        } )
+        sendUberError(res, err)
     })
 })
 
 
 
+if (require.main === module) {
+if (pollingToken) {
 setInterval( () => {
     
 
@@ -309,33 +256,29 @@ setInterval( () => {
     
     axios.post('https://api.uber.com/v1.2/requests/estimate', destination, {
         headers: {
-           'Authorization': 'Bearer ' +token,
+           'Authorization': 'Bearer ' + pollingToken,
            'Accept-Language': 'pt_BR',
            'Content-Type': 'application/json'
         }
     }).then( data => {
-        //console.log(data.data)
         let value = data.data.fare.value;
-        let fare_id = data.data.fare.fare_id;
-        let display = data.data.fare.display;
-        // fare_id value,
-        console.log(display)
-
         if(value < 90) {
             console.log('\x1b[36m', 'HORA BOA PARA CHAMAR UBER!' ,'\x1b[0m');
         } else {
             console.log('\x1b[31m', 'AGUARDE, AINDA ESTÁ CARO!!!' ,'\x1b[0m');
 
         }
-        //es.json(data.data)
-    }).catch( err => {
-        console.log(err)
+    }).catch( () => {
+        console.error('Uber price polling failed')
     })
 }, 8000 )
+}
 
 
 
-app.listen(3000, () => {
+app.listen(3000, process.env.HOST || '127.0.0.1', () => {
     console.log('INICIANDO CONSULTA..');
   });
-  
+}
+
+module.exports = app;
